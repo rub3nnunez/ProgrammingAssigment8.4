@@ -1,0 +1,9 @@
+base
+knitr
+lattice
+ggplot2
+caret
+randomForest
+rpart
+e1071
+rpart.plot

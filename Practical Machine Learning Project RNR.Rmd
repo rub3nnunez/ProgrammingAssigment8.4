@@ -1,0 +1,142 @@
+---
+title: "Practical Machine Learning Final Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Rubén Núñez Rodrigo
+
+#### *8th of May 2020*
+
+## Executive Summary
+
+This documment is a part of the final evaluation of the Practical MAchine Learning course of JHBSPH university to have an overview of the full topics covered on it.
+
+Hereby is the requested exercise **background**:
+
+*Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).*
+
+The requested **DATA** could be found in this location.
+
+- *The training data for this project are available here:*
+
+        https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+- *The test data are available here:*
+
+        https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+*The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.*
+
+Finally the **objective** is about one thing that people regularly do, is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+### Libraries
+```{r}
+library(knitr)
+library(caret)
+```      
+
+### Data Preparation
+
+First it is needed to get all data
+
+```{r}
+
+set.seed(13616)
+
+TrainData <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),na.strings=c("NA","","#DIV/0!"))
+TestData <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),na.strings=c("NA","","#DIV/0!"))
+
+```
+
+And clear the unused columns, that will not add any kind of information to the prediction models
+
+```{r}
+
+TrainData <- TrainData[,-(1:7)]
+TestData <- TestData[,-(1:7)]
+
+```
+
+Secondly it is needed to split the training data to fit the models.
+
+```{r}
+
+train.mark <- createDataPartition(y=TrainData$classe, p=0.7, list=F)
+Set.ModelTrain <- TrainData[train.mark, ]
+Set.ModelTest <- TrainData[-train.mark, ]
+
+dim(Set.ModelTrain)
+
+```
+
+It is very important to simplify the data deleting variables that has values nearly zero.
+
+```{r}
+
+nzvtrain <- nearZeroVar(Set.ModelTrain)
+Set.ModelTrain <- Set.ModelTrain[, -nzvtrain]
+Set.ModelTest <- Set.ModelTest[, -nzvtrain]
+
+dim(Set.ModelTrain)
+
+nzvtest <- nearZeroVar(TestData)
+TestData <- TestData[, -nzvtest]
+
+
+dim(TestData)
+
+```
+
+It is very important to simplify the data deleting variables that has NA value.
+
+```{r}
+
+Set.ModelTrain<- Set.ModelTrain[, colSums(is.na(Set.ModelTrain)) == 0]
+Set.ModelTest <- Set.ModelTest[, colSums(is.na(Set.ModelTest)) == 0]
+TestData <- TestData[, colSums(is.na(TestData)) == 0]
+
+dim(Set.ModelTrain)
+dim(TestData)
+
+```
+
+### Model Training
+
+First it is going to be trained the **Decision Tress** Model with our training data.
+
+```{r}
+
+DT.Fit <- train(classe ~ ., data=Set.ModelTrain, method="rpart", trControl = trainControl(method="cv"))
+predictionDT <- predict(DT.Fit, Set.ModelTest)
+DT.ConfMatrix <- confusionMatrix(predictionDT, Set.ModelTest$classe)
+DT.ConfMatrix
+
+```
+
+In secnod place it is going to be trained the **Random Forest** Model with our training data.
+
+```{r}
+
+RF.Fit <- train(classe ~ ., data=Set.ModelTrain, method="rf", trControl = trainControl(method="cv"))
+predictionRF <- predict(RF.Fit, Set.ModelTest)
+RF.ConfMatrix <- confusionMatrix(predictionRF, Set.ModelTest$classe)
+RF.ConfMatrix
+
+```
+
+After reviewing both approached, it seems to be the Random forest the model to be used with 99.37% of acuracy.
+
+### Model Test
+
+Then it is the turn of the final test data. To for example **Random Forests**
+
+```{r}
+
+FinalResult <- predict(RF.Fit, TestData)
+FinalResult
+
+```
